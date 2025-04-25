@@ -1,0 +1,78 @@
+                             Dataplane Router
+
+
+
+
+ - Descriere generala -
+
+Aceasta aplicatie implementeaza functionalitatea de router software simplificat, care procesează pachete la nivel de Ethernet și IP și se ocupz de rutarea
+acestora pe baza unei tabele de rutare statice, gestionarea ARP și tratarea mesajelor ICMP.
+
+Routerul:
+
+1. Primeste si trimite pachete prin interfete de retea virtuale.
+
+2. Gestioneaza tabela ARP și raspunde la cereri ARP.
+
+3. Construit pe baza unui trie binar pentru lookup rapid în tabela de rutare.
+
+4. Gestioneaza cozi de asteptare pentru pachetele care nu pot fi transmise din lipsa de rezolutie ARP.
+
+5. Trimite răspunsuri ICMP pentru pachete ce nu pot fi rutate, TTL expirat sau ping.
+
+    Structura:
+
+ - Trie pentru căutare în tabela de rutare
+
+Tabela de rutare este convertita intr-un trie binar, unde fiecare nod reprezinta un bit din prefixul IP.
+Astfel se obtine o cautare rapida pentru ruta cea mai specifica (longest prefix match).
+
+Functiile folosite:
+
+add_trie_node() — insereaza noduri în trie.
+
+get_best_route() — cauta cea mai buna ruta pentru un IP.
+
+ - Gestionarea ARP:
+
+1. Trimiterea cererilor ARP (send_ARP_Request)
+
+2. Raspunsuri ARP (send_ARP_Reply)
+
+3. Tratarea raspunsurilor ARP și completarea tabelei (get_ARP_Reply)
+
+4. Pachetele care nu pot fi livrate imediat sunt stocate in coada deferred_packets.
+
+ICMP
+
+Pentru diagnosticare si erori, se trimit mesaje ICMP:
+
+Echo reply (ICMP_echoREPLY) — pentru ping.
+
+Destination unreachable (type 3) — dacă nu există ruta.
+
+Time exceeded (type 11) — dacă TTL ajunge la 0.
+
+    Flux principal de procesare (main):
+
+1. Se initializeaza datele: tabela de rutare, tabela ARP, trie-ul și coada de pachete în asteptare.
+
+2. Se primesc pachete de la interfetele de retea - recv_from_any_link.
+
+3. Se verifica daca pachetul este IP sau ARP.
+
+Pentru IP:
+
+ - Se valideaza checksum-ul si TTL-ul.
+
+ - Se cauta cea mai buna ruta.
+
+ - Daca nu există MAC-ul next-hop, se trimite ARP și se amana pachetul.
+
+ - Altfel se actualizeaza antetul pentru ethernet si se transmite.
+
+Pentru ARP:
+
+ - Daca e request pentru IP-ul dat, trimit reply.
+
+ - Daca e reply, actualizez tabela ARP și reincerc livrarea pachetelor in asteptare.
